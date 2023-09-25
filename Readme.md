@@ -1,8 +1,5 @@
 # Polling-App
 
-# Polling-App
-
-
 ## Steps to Setup the Spring Boot Back end app (polling-app-server)
 
 1. **Clone the application**
