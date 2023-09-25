@@ -5,7 +5,7 @@ secretGenerator:
   - password=R00t
 - name: mysql-user-pass
   literals:
-  - username=callicoder
+  - username=immortals
   - password=c@ll1c0d3r 
 - name: mysql-db-url
   literals:

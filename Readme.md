@@ -1,3 +1,3 @@
-# Polls App 
+# Polling-App
 
 ![App Screenshot](screenshot.png)
