@@ -1,39 +1,33 @@
-#### Stage 1: Build the react application
-FROM node:18.18.1-alpine as build
-
-# Configure the main working directory inside the docker image. 
-# This is the base directory used in any further RUN, COPY, and ENTRYPOINT 
-# commands.
+#### Stage 1: Install dependencies
+FROM node:22-alpine AS deps
 WORKDIR /app
-
-# Copy the package.json as well as the package-lock.json and install 
-# the dependencies. This is a separate step so the dependencies 
-# will be cached unless changes to one of those two files 
-# are made.
 COPY package.json package-lock.json ./
-RUN npm install
+RUN npm ci
 
-# Copy the main application
+#### Stage 2: Build the Next.js application
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . ./
 
-# Arguments
-ARG REACT_APP_API_BASE_URL
-ENV REACT_APP_API_BASE_URL=${REACT_APP_API_BASE_URL}
+# The API base URL must be known at build time because it's a
+# NEXT_PUBLIC_* variable inlined into the client bundle.
+ARG NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 
-# Build the application
 RUN npm run build
 
-#### Stage 2: Serve the React application from Nginx 
-FROM nginx:1.17.0-alpine
+#### Stage 3: Run the standalone Next.js production server
+FROM node:22-alpine AS run
+WORKDIR /app
+ENV NODE_ENV=production
 
-# Copy the react build from Stage 1
-COPY --from=build /app/build /var/www
+COPY --from=build /app/public ./public
+COPY --from=build /app/.next/standalone ./
+COPY --from=build /app/.next/static ./.next/static
 
-# Copy our custom nginx config
-COPY nginx.conf /etc/nginx/nginx.conf
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 
-# Expose port 3000 to the Docker host, so we can access it 
-# from the outside.
-EXPOSE 80
-
-ENTRYPOINT ["nginx","-g","daemon off;"]
+CMD ["node", "server.js"]
