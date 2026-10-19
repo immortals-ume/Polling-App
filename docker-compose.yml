@@ -29,9 +29,9 @@ services:
       context: polling-app-client # Use an image built from the specified dockerfile in the `polling-app-client` directory.
       dockerfile: Dockerfile
       args:
-        REACT_APP_API_BASE_URL: http://127.0.0.1:8080/api
+        NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8080/api
     ports:
-      - "9090:80" # Forward the exposed port 80 on the container to port 80 on the host machine
+      - "9090:3000" # Forward the exposed port 3000 (Next.js) on the container to port 9090 on the host machine
     restart: always
     depends_on:
       - app-server

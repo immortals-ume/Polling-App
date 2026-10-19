@@ -1,7 +1,7 @@
 package com.example.polls.model;
 
 import org.hibernate.annotations.NaturalId;
-import javax.persistence.*;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "roles")
