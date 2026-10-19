@@ -58,6 +58,9 @@ public class Poll extends UserDateAudit {
     @Size(max = 10)
     private Set<@Size(max = 30) String> tags = new LinkedHashSet<>();
 
+    @Column(nullable = false)
+    private boolean allowMultipleChoices = false;
+
     public Long getId() {
         return id;
     }
@@ -142,5 +145,13 @@ public class Poll extends UserDateAudit {
 
     public void setTags(Set<String> tags) {
         this.tags = tags;
+    }
+
+    public boolean isAllowMultipleChoices() {
+        return allowMultipleChoices;
+    }
+
+    public void setAllowMultipleChoices(boolean allowMultipleChoices) {
+        this.allowMultipleChoices = allowMultipleChoices;
     }
 }

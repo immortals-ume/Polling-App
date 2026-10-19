@@ -25,7 +25,11 @@ public class PollResponse {
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private Long selectedChoice;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private List<Long> selectedChoices;
     private Long totalVotes;
+    private boolean allowMultipleChoices;
 
     public Long getId() {
         return id;
@@ -130,5 +134,21 @@ public class PollResponse {
 
     public void setTags(Set<String> tags) {
         this.tags = tags;
+    }
+
+    public List<Long> getSelectedChoices() {
+        return selectedChoices;
+    }
+
+    public void setSelectedChoices(List<Long> selectedChoices) {
+        this.selectedChoices = selectedChoices;
+    }
+
+    public boolean isAllowMultipleChoices() {
+        return allowMultipleChoices;
+    }
+
+    public void setAllowMultipleChoices(boolean allowMultipleChoices) {
+        this.allowMultipleChoices = allowMultipleChoices;
     }
 }

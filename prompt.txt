@@ -1,0 +1,572 @@
+# MASTER PROMPT: Production-Grade AI-Powered Polling Platform
+
+## 1. Role and Mission
+
+Act as a Principal Software Engineer, Senior Java Backend Architect, AI Engineer, Database Engineer, Application Security Engineer, and Site Reliability Engineer.
+
+Build a production-grade AI-powered polling platform using the existing application's technology stack and engineering conventions.
+
+The application must demonstrate:
+- Strong object-oriented design and SOLID principles.
+- Reliable transactional business logic.
+- Database-level data integrity and concurrency safety.
+- Secure REST API development.
+- Production-grade AI integration.
+- Efficient LLM token and cost management.
+- Observability, testing, scalability, and operational readiness.
+- Maintainable, readable, extensible code suitable for a professional engineering portfolio.
+
+Do not build a basic CRUD demo or generate an entire application in one response.
+
+Implement incrementally, validate each phase, and maintain a working application throughout development.
+
+## 2. Existing Technology and Database Constraints
+
+The existing application uses Java/Spring technologies and the MySQL JDBC driver:
+
+`com.mysql:mysql-connector-j`
+
+MySQL must remain the authoritative relational database.
+
+Before making any changes, inspect the repository and identify:
+- Java and Spring Boot versions.
+- Maven dependencies and build configuration.
+- Existing package structure and architectural conventions.
+- MySQL version and connection configuration.
+- Persistence framework: Spring Data JPA, Hibernate, JDBC, or another existing approach.
+- Database migration tooling, if present.
+- Existing authentication and authorization.
+- Existing API response and exception-handling conventions.
+- Existing tests, CI/CD configuration, and deployment setup.
+- Any current functionality that must remain unchanged.
+
+Do not assume that the application uses JPA simply because it uses MySQL. Confirm the actual persistence technology.
+
+### Technology decisions
+
+- Backend: existing Java and Spring Boot stack.
+- Database: existing MySQL database using InnoDB where appropriate.
+- AI: Spring AI with a configurable LLM provider.
+- Primary AI provider: OpenAI API, unless the repository or project configuration specifies otherwise.
+- Optional alternative provider: Amazon Bedrock.
+- Authentication: existing Spring Security setup, or implement an appropriate secure mechanism if absent.
+- Caching and rate limiting: Redis when justified.
+- Real-time updates: WebSocket or Server-Sent Events when justified.
+- Asynchronous messaging: Kafka only when required by measurable workload or reliability requirements.
+- Testing: JUnit 5, Mockito, Spring Boot Test, and Testcontainers.
+- API documentation: OpenAPI.
+- Observability: Spring Boot Actuator, Micrometer, and OpenTelemetry-compatible tracing.
+- Build and local environment: Maven and Docker.
+
+Use compatible, supported dependency versions. Follow the repository's existing conventions and avoid unnecessary dependencies.
+
+Do not introduce MongoDB, a second database, microservices, Kafka, or other infrastructure without a documented architectural reason.
+
+## 3. Product Requirements
+
+Build an AI-powered polling application where users can create polls, vote, see results, and use AI to generate poll content and understand voting trends.
+
+### 3.1 User and Access Management
+
+Support:
+- User registration and authentication, where not already provided.
+- User profiles and account status.
+- Roles and permissions appropriate to the application.
+- Poll ownership and access control.
+- Public and private polls.
+- Administrative operations with explicit authorization.
+- Audit logging for sensitive actions.
+
+Enforce authorization in the backend. Never trust a user ID, role, creator ID, or permission supplied by the client.
+
+### 3.2 Poll Lifecycle
+
+Support:
+- Creating and editing draft polls.
+- Publishing polls.
+- Opening and closing polls.
+- Archiving completed polls.
+- Configurable start and end times.
+- Single-choice and multiple-choice voting.
+- Poll categories and tags.
+- Search, filtering, and pagination.
+- Configurable visibility of results.
+- Configurable voting eligibility and vote-changing rules.
+
+Define explicit state transitions, for example:
+
+DRAFT → PUBLISHED → CLOSED → ARCHIVED
+
+Validate every transition in the business layer. Prevent voting before opening, after closing, or when the poll is otherwise ineligible to accept votes.
+
+Define the exact behavior for concurrent poll closure and vote submission, including how deadlines are enforced.
+
+### 3.3 Voting System
+
+Treat voting correctness as a critical business invariant.
+
+Requirements:
+- Validate the poll, voter eligibility, poll status, and selected options.
+- Prevent duplicate voting according to the poll's voting policy.
+- Support single-choice and multiple-choice polls.
+- Handle simultaneous requests safely across multiple application instances.
+- Support idempotent request retries.
+- Prevent double counting.
+- Keep vote records and related selections transactionally consistent.
+- Return clear and consistent errors for invalid or conflicting submissions.
+- Ensure unauthorized users cannot vote in restricted polls.
+- Define whether users can change or withdraw their votes.
+
+Do not depend exclusively on an application-level check before insertion to prevent duplicates.
+
+Use MySQL constraints, transactions, appropriate indexes, and a justified concurrency-control strategy.
+
+Test the implementation against real MySQL using multiple database connections. Do not treat an H2-only test as proof of MySQL concurrency correctness.
+
+## 4. AI Features
+
+### 4.1 AI Poll Generator
+
+Allow a user to enter a natural-language request such as:
+
+"Create a poll for software engineers about their preferred AI coding assistants."
+
+Generate structured output containing:
+- Poll question.
+- Answer options.
+- Category and tags.
+- Optional description.
+- Optional follow-up questions.
+
+Requirements:
+- Integrate using Spring AI.
+- Use structured output and schema validation.
+- Validate generated content on the server.
+- Enforce maximum question length, option count, and content size.
+- Handle malformed responses and provider failures.
+- Apply timeouts, bounded retries, and concurrency limits.
+- Require user review before publication.
+- Keep AI generation separate from poll persistence and voting logic.
+- Do not let AI output bypass business rules or authorization.
+- Never blindly retry non-idempotent operations.
+
+### 4.2 AI-Powered Poll Analytics
+
+Allow users to request a plain-language explanation of poll results.
+
+Example:
+
+"Summarize the voting trends and explain which option is most popular."
+
+Implement the workflow as follows:
+
+1. Retrieve authorized poll results.
+2. Calculate authoritative counts and percentages using deterministic backend logic or verified SQL aggregates.
+3. Prepare a minimal, validated result dataset.
+4. Pass the relevant aggregates to the LLM.
+5. Generate a concise, evidence-based explanation.
+6. Associate the explanation with the relevant poll version or result timestamp.
+
+The LLM must not invent authoritative counts or percentages.
+
+Handle ties, small sample sizes, missing data, and incomplete results appropriately. Clearly distinguish factual observations from interpretations.
+
+Cache summaries only when their cache keys incorporate the relevant poll version, result state, and prompt/model configuration. Invalidate stale results when appropriate.
+
+### 4.3 Natural-Language Poll Search
+
+Support queries such as:
+
+"Find open polls about Java that have more than 100 votes."
+
+Convert natural-language input into a constrained, typed search specification.
+
+Validate filters, pagination, and permissions in the backend. Never execute arbitrary SQL, database commands, or generated code supplied by an LLM.
+
+### 4.4 AI-Assisted Abuse Detection
+
+Optionally identify suspicious voting patterns using deterministic rules and AI-assisted risk analysis.
+
+Start with reliable safeguards:
+- Authentication.
+- Rate limiting.
+- Duplicate-vote prevention.
+- Idempotency.
+- Eligibility validation.
+- Audit events.
+
+Treat AI-generated risk scores as signals requiring evaluation, not proof of fraud. Do not automatically penalize users solely because an LLM labels their behavior suspicious.
+
+## 5. MySQL Database Design
+
+Design a normalized relational schema that integrates with the existing user model.
+
+Candidate tables:
+- users, or the existing equivalent.
+- polls.
+- poll_options.
+- votes.
+- vote_selections for multiple-choice submissions.
+- result_aggregates if justified.
+- audit_events where required.
+- AI usage metadata where required.
+
+Adapt names, identifiers, types, and relationships to existing project conventions.
+
+### Database requirements
+
+- Use primary keys and foreign keys.
+- Add unique constraints for critical business invariants.
+- Add indexes based on query patterns.
+- Use transactions for multi-table vote submissions.
+- Prevent duplicate selections within one vote.
+- Ensure selected options belong to the poll being voted on.
+- Document transaction boundaries and isolation assumptions.
+- Use an explicit UTC timestamp convention.
+- Use the existing migration framework or introduce one only when justified.
+- Never make destructive schema changes without explicit approval.
+- Avoid unbounded collections of votes embedded in a single poll record.
+
+For a single-vote-per-user policy, evaluate a unique constraint on `(poll_id, user_id)` in the vote record.
+
+For multiple-choice polls, model a vote submission and its selected options separately. Prevent duplicate option selections and ensure that all selections belong to the correct poll.
+
+Consider materialized result aggregates only when workload measurements justify them. If aggregates are maintained asynchronously, implement idempotency, reconciliation, and rebuilding procedures.
+
+Keep committed vote records as the authoritative source.
+
+## 6. REST API Design
+
+Define versioned REST APIs using the repository's conventions.
+
+Possible endpoints include:
+
+- POST `/api/v1/polls`
+- GET `/api/v1/polls/{pollId}`
+- PATCH `/api/v1/polls/{pollId}`
+- POST `/api/v1/polls/{pollId}/publish`
+- POST `/api/v1/polls/{pollId}/close`
+- POST `/api/v1/polls/{pollId}/votes`
+- GET `/api/v1/polls/{pollId}/results`
+- POST `/api/v1/ai/polls/generate`
+- POST `/api/v1/ai/polls/{pollId}/analyze`
+- GET `/api/v1/polls/search`
+
+Treat these as starting points and refine them based on the existing application architecture.
+
+For every endpoint, document:
+- Request and response schemas.
+- Authentication and permissions.
+- Input validation.
+- Success and failure status codes.
+- Idempotency behavior.
+- Pagination.
+- Rate limits where applicable.
+
+Use appropriate HTTP status codes, including 400, 401, 403, 404, 409, 422 where appropriate, 429, and 503.
+
+Implement centralized exception handling. Never expose stack traces, credentials, raw database exceptions, or internal provider errors to clients.
+
+## 7. Architecture and Code Quality
+
+Prefer a modular monolith unless actual requirements justify distributed services.
+
+Separate responsibilities into cohesive modules or packages, such as:
+- identity
+- polls
+- voting
+- results
+- AI
+- notifications
+- audit
+- configuration
+- common
+
+Apply:
+- SOLID principles.
+- Dependency inversion.
+- Separation of concerns.
+- Constructor injection.
+- Clear domain boundaries.
+- Thin controllers.
+- Explicit transaction boundaries.
+- Centralized validation and exception handling.
+- Immutable DTOs where appropriate.
+- Consistent naming and package conventions.
+
+Do not place business logic in controllers or couple domain logic directly to LLM providers.
+
+Use interfaces where they create useful boundaries, not simply to increase the number of classes.
+
+Avoid god classes, unnecessary abstractions, duplicated business logic, premature microservices, and excessive design patterns.
+
+## 8. Security Requirements
+
+Apply security practices appropriate for production.
+
+Include:
+- Secure authentication and authorization.
+- Object-level access control.
+- Input validation and output encoding where appropriate.
+- Protection against SQL injection.
+- Safe database query construction.
+- Rate limiting and request-size limits.
+- Appropriate CSRF and CORS configuration.
+- Secure secret management.
+- Least-privilege database access.
+- Encryption in transit and appropriate protection at rest.
+- Safe logging and sensitive-data redaction.
+- Dependency vulnerability scanning.
+- Audit trails for administrative operations.
+- Data retention, deletion, and privacy policies.
+
+Never hardcode API keys, database passwords, JWT signing secrets, or production connection strings.
+
+Use safe local-development defaults and environment-specific production configuration.
+
+Treat prompts, model output, and retrieved content as untrusted input. Do not expose privileged tools or arbitrary database access to the LLM.
+
+## 9. AI Token and Cost Optimization
+
+Build an AI integration layer that tracks and controls LLM usage.
+
+Implement:
+- Prompt templates with explicit versions.
+- Minimal context and bounded input sizes.
+- Structured output with only required fields.
+- Configurable model selection.
+- Token usage tracking where provider metadata permits.
+- Estimated cost by feature and model.
+- Request timeouts.
+- Bounded concurrency.
+- Rate limiting.
+- Bounded retries with backoff and jitter.
+- Response validation.
+- Safe caching for repeatable requests.
+- Provider-specific capability handling.
+
+Use deterministic code instead of an LLM for validation, vote counting, percentage calculation, database filtering, and ordinary business rules.
+
+Do not send entire database records or unrelated conversation context to the model.
+
+Never reuse cached private outputs across users or authorization boundaries.
+
+Record baseline token usage, latency, failure rate, and estimated cost before claiming an optimization.
+
+Do not assume token usage or pricing fields are always available. Handle missing usage metadata explicitly.
+
+## 10. Concurrency and Distributed-System Reliability
+
+Design for multiple concurrent users and multiple application instances.
+
+Address:
+- Simultaneous vote submissions.
+- Duplicate client retries.
+- Poll closure racing with voting.
+- Database connection pool limits.
+- Redis failure, if Redis is used.
+- LLM provider timeouts and throttling.
+- Duplicate event delivery, if messaging is used.
+- Graceful shutdown.
+- Bounded executors and queues.
+- Backpressure.
+- Recovery from interrupted processing.
+
+Use timeouts and appropriate isolation or bulkheads around external dependencies.
+
+If asynchronous messaging is introduced, define event schemas, idempotent consumers, retry handling, dead-letter processing, replay procedures, and monitoring.
+
+Evaluate the transactional outbox pattern if reliable event publication following a database transaction is required.
+
+Do not claim exactly-once processing without defining and proving the relevant guarantees. Use durable state and idempotency to protect business outcomes.
+
+## 11. Real-Time Results
+
+If real-time results are included, implement WebSocket or SSE based on the actual communication requirements.
+
+Ensure:
+- Authorization for subscriptions.
+- No exposure of individual voter identities.
+- Defined consistency semantics.
+- Reconnect and missed-event recovery.
+- Bounded connection and message rates.
+- Backpressure.
+- Safe scaling across application instances.
+
+Keep MySQL as the authoritative data source. Redis and messaging, if introduced, must not silently become independent sources of truth.
+
+## 12. Testing and Verification
+
+Implement unit, integration, security, and concurrency tests.
+
+### Unit tests
+- Poll lifecycle rules.
+- Voting validation.
+- Idempotency behavior.
+- Result calculation.
+- Authorization decisions.
+- AI output validation.
+- Error handling.
+
+### Integration tests
+- MySQL persistence and constraints.
+- Database migrations.
+- Transaction rollback.
+- Authentication and authorization.
+- Redis behavior where applicable.
+- AI provider error handling through controlled test doubles.
+- Messaging and event idempotency where applicable.
+
+### Concurrency tests
+- Concurrent submissions for the same user and poll.
+- Concurrent submissions from different eligible users.
+- Duplicate retries.
+- Multiple-choice duplicate selections.
+- Concurrent closure and vote submission.
+- Aggregate consistency with committed records.
+
+Use Testcontainers with the relevant MySQL version to validate database behavior. Do not rely only on mocks or H2 for critical persistence and concurrency guarantees.
+
+Verify that all rejected or failed submissions leave the database in a valid state.
+
+## 13. Performance and Observability
+
+Establish measurable performance goals before optimization.
+
+Measure:
+- API latency at p50, p95, and p99.
+- Request throughput.
+- Error rate.
+- Database query latency.
+- Connection pool utilization.
+- Voting contention.
+- Cache hit rate.
+- AI latency, token usage, and estimated cost.
+- Resource utilization.
+- Result consistency.
+
+Use a load-testing tool such as k6 or Gatling.
+
+A target such as p95 latency below 200 ms for non-AI endpoints may be used as an initial hypothesis, but must be validated against a defined workload.
+
+Implement:
+- Structured logs.
+- Correlation and trace IDs.
+- Application metrics.
+- Health and readiness endpoints.
+- Error monitoring.
+- Alerts for meaningful failures.
+- Dashboards and operational runbooks.
+
+Do not place personal data or high-cardinality identifiers in metric labels.
+
+## 14. Deployment and Engineering Deliverables
+
+Provide:
+- README with setup instructions.
+- Architecture diagram in Mermaid.
+- Poll lifecycle diagram.
+- Vote submission sequence diagram.
+- Database schema and index documentation.
+- API documentation.
+- Configuration examples without real secrets.
+- Dockerfile and Docker Compose where appropriate.
+- Automated CI checks.
+- Test suites.
+- Threat model and security checklist.
+- Load-testing scripts and actual benchmark results.
+- Deployment, rollback, backup, and recovery procedures.
+- AI prompt versioning and cost-measurement documentation.
+- Architecture decision records for significant trade-offs.
+
+Keep all documentation synchronized with the implemented code.
+
+## 15. Mandatory Development Workflow
+
+### Phase 1: Repository discovery
+Inspect the project, dependencies, database configuration, architecture, tests, and existing behavior.
+
+Produce an implementation plan, list assumptions and risks, identify critical invariants, and define acceptance criteria.
+
+Do not modify application code until the repository structure and constraints are understood.
+
+### Phase 2: Domain and database
+Design the relational schema, poll lifecycle, MySQL constraints, indexes, and transaction strategy.
+
+Implement and test the core domain and persistence layer.
+
+### Phase 3: Secure APIs
+Implement poll management, authentication integration, authorization, validation, and voting APIs.
+
+Verify concurrent voting and transaction correctness.
+
+### Phase 4: AI integration
+Implement AI poll generation, structured output validation, analytics, prompt versioning, token usage tracking, and cost controls.
+
+Verify that normal polling remains functional when the AI provider is unavailable.
+
+### Phase 5: Real-time and scalability
+Add live results or asynchronous processing only where justified. Test recovery, idempotency, and cross-instance behavior.
+
+### Phase 6: Production hardening
+Add observability, security checks, deployment configuration, load testing, and operational documentation.
+
+At the end of each phase:
+1. Summarize files created or modified.
+2. Explain important design decisions.
+3. Run the relevant build and tests.
+4. Report actual results.
+5. List outstanding defects, risks, and assumptions.
+6. Confirm whether the phase acceptance criteria passed.
+
+Never mark unverified functionality as complete.
+
+## 16. Coding Rules
+
+- Produce compilable, runnable code for implemented functionality.
+- Preserve existing working functionality.
+- Follow repository conventions.
+- Use meaningful names and cohesive classes.
+- Avoid unnecessary dependencies and abstractions.
+- Never swallow exceptions silently.
+- Never hardcode secrets.
+- Never disable security to make tests pass.
+- Never invent benchmark results.
+- Never claim tests passed unless they were executed.
+- Do not overwrite unrelated user changes.
+- Ask for clarification before destructive migrations or significant architectural changes.
+
+## 17. Definition of Done
+
+The application can be considered ready for a production-readiness review only when:
+- The application builds successfully.
+- Setup instructions have been verified.
+- Required tests pass.
+- MySQL integrity constraints are verified.
+- Concurrent voting and retry behavior are tested.
+- Authorization boundaries are tested.
+- AI output is validated.
+- AI failures are handled safely.
+- Secrets are excluded from the repository.
+- Observability and operational documentation exist.
+- Performance results are measured and documented.
+- Known limitations and remaining risks are disclosed.
+
+Distinguish clearly between implemented, tested, benchmarked, and deployed functionality.
+
+## Immediate Instruction
+
+Start with Phase 1 only.
+
+Inspect the existing repository and report:
+1. The current architecture and technology versions.
+2. The existing MySQL persistence approach.
+3. The current package and module structure.
+4. Missing dependencies, if any.
+5. Critical business and security invariants.
+6. A proposed implementation plan.
+7. Acceptance criteria for each phase.
+
+Do not generate the entire application at once. Do not introduce MongoDB. Do not change the existing architecture without a justified reason.
+
+After reporting the findings, proceed incrementally through the implementation, validating every phase before continuing.

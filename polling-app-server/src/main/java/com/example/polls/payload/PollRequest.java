@@ -27,6 +27,8 @@ public class PollRequest {
     @Size(max = 10)
     private Set<@Size(max = 30) String> tags;
 
+    private boolean allowMultipleChoices = false;
+
     public String getQuestion() {
         return question;
     }
@@ -65,5 +67,13 @@ public class PollRequest {
 
     public void setTags(Set<String> tags) {
         this.tags = tags;
+    }
+
+    public boolean isAllowMultipleChoices() {
+        return allowMultipleChoices;
+    }
+
+    public void setAllowMultipleChoices(boolean allowMultipleChoices) {
+        this.allowMultipleChoices = allowMultipleChoices;
     }
 }
