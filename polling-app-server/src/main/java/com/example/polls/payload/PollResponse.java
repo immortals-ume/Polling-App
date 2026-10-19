@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 
 public class PollResponse {
     private Long id;
@@ -17,6 +18,10 @@ public class PollResponse {
     private Boolean isExpired;
     private PollStatus status;
     private PollVisibility visibility;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String category;
+    private Set<String> tags;
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private Long selectedChoice;
@@ -109,5 +114,21 @@ public class PollResponse {
 
     public void setVisibility(PollVisibility visibility) {
         this.visibility = visibility;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public Set<String> getTags() {
+        return tags;
+    }
+
+    public void setTags(Set<String> tags) {
+        this.tags = tags;
     }
 }

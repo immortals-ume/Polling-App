@@ -40,8 +40,9 @@ public class PollController {
     @GetMapping
     public PagedResponse<PollResponse> getPolls(@CurrentUser UserPrincipal currentUser,
                                                 @RequestParam(value = "page", defaultValue = AppConstants.DEFAULT_PAGE_NUMBER) int page,
-                                                @RequestParam(value = "size", defaultValue = AppConstants.DEFAULT_PAGE_SIZE) int size) {
-        return pollService.getAllPolls(currentUser, page, size);
+                                                @RequestParam(value = "size", defaultValue = AppConstants.DEFAULT_PAGE_SIZE) int size,
+                                                @RequestParam(value = "category", required = false) String category) {
+        return pollService.getAllPolls(currentUser, page, size, category);
     }
 
     @PostMapping

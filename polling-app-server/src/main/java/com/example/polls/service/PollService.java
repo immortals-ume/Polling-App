@@ -46,12 +46,14 @@ public class PollService {
 
     private static final Logger logger = LoggerFactory.getLogger(PollService.class);
 
-    public PagedResponse<PollResponse> getAllPolls(UserPrincipal currentUser, int page, int size) {
+    public PagedResponse<PollResponse> getAllPolls(UserPrincipal currentUser, int page, int size, String category) {
         validatePageNumberAndSize(page, size);
 
         // Retrieve Polls
         Pageable pageable = PageRequest.of(page, size, Sort.Direction.DESC, "createdAt");
-        Page<Poll> polls = pollRepository.findAll(pageable);
+        Page<Poll> polls = (category == null || category.isBlank())
+                ? pollRepository.findAll(pageable)
+                : pollRepository.findByCategory(category, pageable);
 
         if(polls.getNumberOfElements() == 0) {
             return new PagedResponse<>(Collections.emptyList(), polls.getNumber(),
@@ -162,6 +164,10 @@ public class PollService {
         // UI yet, so skip DRAFT and go straight to PUBLISHED to preserve that behavior.
         poll.setStatus(PollStatus.PUBLISHED);
         poll.setVisibility(PollVisibility.PUBLIC);
+        poll.setCategory(pollRequest.getCategory());
+        if (pollRequest.getTags() != null) {
+            poll.setTags(pollRequest.getTags());
+        }
 
         return pollRepository.save(poll);
     }

@@ -10,7 +10,9 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "polls")
@@ -46,6 +48,15 @@ public class Poll extends UserDateAudit {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private PollVisibility visibility = PollVisibility.PUBLIC;
+
+    @Size(max = 40)
+    private String category;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "poll_tags", joinColumns = @JoinColumn(name = "poll_id"))
+    @Column(name = "tag", length = 30)
+    @Size(max = 10)
+    private Set<@Size(max = 30) String> tags = new LinkedHashSet<>();
 
     public Long getId() {
         return id;
@@ -115,5 +126,21 @@ public class Poll extends UserDateAudit {
 
     public void setVisibility(PollVisibility visibility) {
         this.visibility = visibility;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public Set<String> getTags() {
+        return tags;
+    }
+
+    public void setTags(Set<String> tags) {
+        this.tags = tags;
     }
 }
