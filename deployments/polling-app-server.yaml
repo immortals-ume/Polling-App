@@ -41,6 +41,11 @@ spec:
             secretKeyRef:
               name: mysql-db-url
               key: url
+        - name: APP_JWT_SECRET # Required - must be created separately, e.g. `kubectl create secret generic app-jwt-secret --from-literal=secret=<value>`
+          valueFrom:
+            secretKeyRef:
+              name: app-jwt-secret
+              key: secret
 ---
 apiVersion: v1                # API version
 kind: Service                 # Type of the kubernetes resource
