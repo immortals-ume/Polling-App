@@ -1,5 +1,7 @@
 package com.example.polls.payload;
 
+import com.example.polls.model.PollStatus;
+import com.example.polls.model.PollVisibility;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.time.Instant;
@@ -13,6 +15,8 @@ public class PollResponse {
     private Instant creationDateTime;
     private Instant expirationDateTime;
     private Boolean isExpired;
+    private PollStatus status;
+    private PollVisibility visibility;
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private Long selectedChoice;
@@ -89,5 +93,21 @@ public class PollResponse {
 
     public void setTotalVotes(Long totalVotes) {
         this.totalVotes = totalVotes;
+    }
+
+    public PollStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(PollStatus status) {
+        this.status = status;
+    }
+
+    public PollVisibility getVisibility() {
+        return visibility;
+    }
+
+    public void setVisibility(PollVisibility visibility) {
+        this.visibility = visibility;
     }
 }

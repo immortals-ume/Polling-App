@@ -1,6 +1,7 @@
 package com.example.polls.service;
 
 import com.example.polls.exception.BadRequestException;
+import com.example.polls.exception.ForbiddenActionException;
 import com.example.polls.exception.ResourceNotFoundException;
 import com.example.polls.model.*;
 import com.example.polls.payload.PagedResponse;
@@ -157,15 +158,67 @@ public class PollService {
 
         poll.setExpirationDateTime(expirationDateTime);
 
+        // Polls have always been immediately votable on creation - there is no draft
+        // UI yet, so skip DRAFT and go straight to PUBLISHED to preserve that behavior.
+        poll.setStatus(PollStatus.PUBLISHED);
+        poll.setVisibility(PollVisibility.PUBLIC);
+
         return pollRepository.save(poll);
+    }
+
+    public PollResponse publishPoll(Long pollId, UserPrincipal currentUser) {
+        Poll poll = pollRepository.findById(pollId)
+                .orElseThrow(() -> new ResourceNotFoundException("Poll", "id", pollId));
+        ensureOwnerOrAdmin(poll, currentUser);
+        transitionPoll(poll, PollStatus.PUBLISHED);
+        return buildPollResponse(poll, currentUser);
+    }
+
+    public PollResponse closePoll(Long pollId, UserPrincipal currentUser) {
+        Poll poll = pollRepository.findById(pollId)
+                .orElseThrow(() -> new ResourceNotFoundException("Poll", "id", pollId));
+        ensureOwnerOrAdmin(poll, currentUser);
+        transitionPoll(poll, PollStatus.CLOSED);
+        return buildPollResponse(poll, currentUser);
+    }
+
+    public PollResponse archivePoll(Long pollId, UserPrincipal currentUser) {
+        Poll poll = pollRepository.findById(pollId)
+                .orElseThrow(() -> new ResourceNotFoundException("Poll", "id", pollId));
+        ensureOwnerOrAdmin(poll, currentUser);
+        transitionPoll(poll, PollStatus.ARCHIVED);
+        return buildPollResponse(poll, currentUser);
+    }
+
+    private void transitionPoll(Poll poll, PollStatus target) {
+        try {
+            poll.transitionTo(target);
+        } catch (IllegalStateException ex) {
+            throw new BadRequestException(ex.getMessage());
+        }
+        pollRepository.save(poll);
+    }
+
+    private void ensureOwnerOrAdmin(Poll poll, UserPrincipal currentUser) {
+        boolean isOwner = poll.getCreatedBy() != null && poll.getCreatedBy().equals(currentUser.getId());
+        boolean isAdmin = currentUser.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals(RoleName.ROLE_ADMIN.name()));
+
+        if (!isOwner && !isAdmin) {
+            throw new ForbiddenActionException("You don't have permission to modify this poll");
+        }
     }
 
     public PollResponse getPollById(Long pollId, UserPrincipal currentUser) {
         Poll poll = pollRepository.findById(pollId).orElseThrow(
                 () -> new ResourceNotFoundException("Poll", "id", pollId));
 
+        return buildPollResponse(poll, currentUser);
+    }
+
+    private PollResponse buildPollResponse(Poll poll, UserPrincipal currentUser) {
         // Retrieve Vote Counts of every choice belonging to the current poll
-        List<ChoiceVoteCount> votes = voteRepository.countByPollIdGroupByChoiceId(pollId);
+        List<ChoiceVoteCount> votes = voteRepository.countByPollIdGroupByChoiceId(poll.getId());
 
         Map<Long, Long> choiceVotesMap = votes.stream()
                 .collect(Collectors.toMap(ChoiceVoteCount::getChoiceId, ChoiceVoteCount::getVoteCount));
@@ -177,7 +230,7 @@ public class PollService {
         // Retrieve vote done by logged in user
         Vote userVote = null;
         if(currentUser != null) {
-            userVote = voteRepository.findByUserIdAndPollId(currentUser.getId(), pollId);
+            userVote = voteRepository.findByUserIdAndPollId(currentUser.getId(), poll.getId());
         }
 
         return ModelMapper.mapPollToPollResponse(poll, choiceVotesMap,
@@ -190,6 +243,10 @@ public class PollService {
 
         if(poll.getExpirationDateTime().isBefore(Instant.now())) {
             throw new BadRequestException("Sorry! This Poll has already expired");
+        }
+
+        if(!poll.getStatus().acceptsVotes()) {
+            throw new BadRequestException("Sorry! This Poll is not open for voting (status: " + poll.getStatus() + ")");
         }
 
         User user = userRepository.getReferenceById(currentUser.getId());

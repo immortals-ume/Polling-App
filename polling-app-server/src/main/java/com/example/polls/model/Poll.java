@@ -37,6 +37,16 @@ public class Poll extends UserDateAudit {
     @NotNull
     private Instant expirationDateTime;
 
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private PollStatus status = PollStatus.DRAFT;
+
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private PollVisibility visibility = PollVisibility.PUBLIC;
+
     public Long getId() {
         return id;
     }
@@ -77,5 +87,33 @@ public class Poll extends UserDateAudit {
     public void removeChoice(Choice choice) {
         choices.remove(choice);
         choice.setPoll(null);
+    }
+
+    public PollStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(PollStatus status) {
+        this.status = status;
+    }
+
+    /**
+     * Enforces the DRAFT -> PUBLISHED -> CLOSED -> ARCHIVED state machine.
+     * Throws IllegalStateException on any transition PollStatus doesn't allow.
+     */
+    public void transitionTo(PollStatus target) {
+        if (!status.canTransitionTo(target)) {
+            throw new IllegalStateException(
+                    "Cannot transition poll from " + status + " to " + target);
+        }
+        this.status = target;
+    }
+
+    public PollVisibility getVisibility() {
+        return visibility;
+    }
+
+    public void setVisibility(PollVisibility visibility) {
+        this.visibility = visibility;
     }
 }

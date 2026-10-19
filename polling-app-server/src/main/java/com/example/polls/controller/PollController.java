@@ -71,4 +71,22 @@ public class PollController {
         return pollService.castVoteAndGetUpdatedPoll(pollId, voteRequest, currentUser);
     }
 
+    @PostMapping("/{pollId}/publish")
+    @PreAuthorize("hasRole('USER')")
+    public PollResponse publishPoll(@CurrentUser UserPrincipal currentUser, @PathVariable Long pollId) {
+        return pollService.publishPoll(pollId, currentUser);
+    }
+
+    @PostMapping("/{pollId}/close")
+    @PreAuthorize("hasRole('USER')")
+    public PollResponse closePoll(@CurrentUser UserPrincipal currentUser, @PathVariable Long pollId) {
+        return pollService.closePoll(pollId, currentUser);
+    }
+
+    @PostMapping("/{pollId}/archive")
+    @PreAuthorize("hasRole('USER')")
+    public PollResponse archivePoll(@CurrentUser UserPrincipal currentUser, @PathVariable Long pollId) {
+        return pollService.archivePoll(pollId, currentUser);
+    }
+
 }
