@@ -1,5 +1,5 @@
 package com.example.polls.payload;
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 public class VoteRequest {
     @NotNull
